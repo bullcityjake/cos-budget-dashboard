@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circles of Support — FY2026 Budget Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --cream: #F7F2EA;
+    --warm-white: #FDFAF5;
+    --terracotta: #C0614A;
+    --terracotta-light: #E8887A;
+    --sage: #6B8C74;
+    --sage-light: #A3BFA8;
+    --gold: #C9963A;
+    --gold-light: #E8C577;
+    --ink: #2A2420;
+    --ink-mid: #5A4F47;
+    --ink-light: #9A8E85;
+    --border: #E2D9CF;
+    --shadow: rgba(42,36,32,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--ink);
+    padding: 36px 48px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 80% 50%, rgba(192,97,74,0.18) 0%, transparent 60%),
+                radial-gradient(ellipse at 20% 80%, rgba(107,140,116,0.12) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .header-inner {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .org-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--terracotta-light);
+    margin-bottom: 8px;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 3vw, 32px);
+    font-weight: 700;
+    color: #FFF8F0;
+    line-height: 1.2;
+  }
+  .header-meta {
+    text-align: right;
+  }
+  .header-meta .fy-label {
+    font-size: 12px;
+    color: var(--ink-light);
+    letter-spacing: 0.06em;
+  }
+  .header-meta .fy-period {
+    font-size: 14px;
+    color: #C8BFB5;
+    margin-top: 4px;
+  }
+
+  /* ── Main layout ── */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 32px 60px;
+  }
+
+  /* ── KPI Cards ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+
+  .kpi-card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 26px;
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeUp 0.5s ease forwards;
+  }
+  .kpi-card:nth-child(1) { animation-delay: 0.1s; }
+  .kpi-card:nth-child(2) { animation-delay: 0.2s; }
+  .kpi-card:nth-child(3) { animation-delay: 0.3s; }
+  .kpi-card:nth-child(4) { animation-delay: 0.4s; }
+
+  .kpi-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px;
+    height: 100%;
+    border-radius: 16px 0 0 16px;
+    background: var(--card-accent, var(--sage));
+  }
+  .kpi-card.accent-terracotta { --card-accent: var(--terracotta); }
+  .kpi-card.accent-sage       { --card-accent: var(--sage); }
+  .kpi-card.accent-gold       { --card-accent: var(--gold); }
+  .kpi-card.accent-warn       { --card-accent: #D4773C; }
+
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 12px;
+  }
+  .kpi-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .kpi-sub {
+    font-size: 12px;
+    color: var(--ink-light);
+    line-height: 1.5;
+  }
+  .kpi-sub strong { color: var(--ink-mid); }
+
+  /* progress bar inside KPI */
+  .kpi-bar-wrap {
+    margin-top: 16px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .kpi-bar {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--card-accent, var(--sage));
+    transition: width 1.2s cubic-bezier(.4,0,.2,1);
+    width: 0;
+  }
+
+  /* ── Section header ── */
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .section-note {
+    font-size: 12px;
+    color: var(--ink-light);
+  }
+
+  /* ── Charts row ── */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+  @media (max-width: 768px) {
+    .charts-row { grid-template-columns: 1fr; }
+  }
+
+  .chart-card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    opacity: 0;
+    animation: fadeUp 0.5s ease 0.5s forwards;
+  }
+  .chart-card:nth-child(2) { animation-delay: 0.6s; }
+
+  .chart-wrap {
+    position: relative;
+    height: 260px;
+  }
+
+  /* ── Category table ── */
+  .table-card {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeUp 0.5s ease 0.7s forwards;
+    margin-bottom: 40px;
+  }
+  .table-card-header {
+    padding: 22px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  thead th {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    padding: 14px 28px;
+    text-align: left;
+    background: #F5EFE6;
+    border-bottom: 1px solid var(--border);
+  }
+  thead th:not(:first-child) { text-align: right; }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #F5EFE6; }
+  td {
+    padding: 14px 28px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  td:not(:first-child) { text-align: right; }
+  td:first-child { font-weight: 500; }
+  .td-num { font-variant-numeric: tabular-nums; color: var(--ink-mid); }
+  .td-avg { color: var(--ink-light); }
+  .td-bar-cell { width: 120px; }
+
+  .mini-bar-wrap {
+    height: 5px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .mini-bar {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--terracotta);
+    transition: width 1s ease;
+  }
+
+  /* ── Pace alert ── */
+  .pace-banner {
+    background: linear-gradient(135deg, #FFF3EC 0%, #FDEEDD 100%);
+    border: 1px solid #F0C89A;
+    border-radius: 14px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    opacity: 0;
+    animation: fadeUp 0.5s ease 0.9s forwards;
+    margin-bottom: 40px;
+  }
+  .pace-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .pace-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #8B4A1C;
+    margin-bottom: 4px;
+  }
+  .pace-body {
+    font-size: 13px;
+    color: #A0632C;
+    line-height: 1.6;
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 11px;
+    color: var(--ink-light);
+    letter-spacing: 0.05em;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <div class="org-label">Ministry Budget — 701 · Circles of Support</div>
+      <h1>Annual Budget Dashboard<br>Fiscal Year 2026</h1>
+    </div>
+    <div class="header-meta">
+      <div class="fy-label">FISCAL YEAR</div>
+      <div class="fy-period">August 2025 – July 2026</div>
+      <div style="margin-top:8px; font-size:11px; color:var(--ink-light);">Last updated: December 2025</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card accent-terracotta">
+      <div class="kpi-label">Annual Budget</div>
+      <div class="kpi-value">$13,000</div>
+      <div class="kpi-sub">FY2026 · August 2025 – July 2026</div>
+    </div>
+    <div class="kpi-card accent-sage">
+      <div class="kpi-label">Spent to Date</div>
+      <div class="kpi-value">$8,170</div>
+      <div class="kpi-sub"><strong>5 months</strong> of actuals (Aug – Dec 2025)</div>
+      <div class="kpi-bar-wrap"><div class="kpi-bar" data-pct="62.8"></div></div>
+    </div>
+    <div class="kpi-card accent-gold">
+      <div class="kpi-label">Remaining Budget</div>
+      <div class="kpi-value">$4,830</div>
+      <div class="kpi-sub">Across <strong>7 months</strong> remaining · $690/mo available</div>
+      <div class="kpi-bar-wrap" style="--card-accent:var(--gold)"><div class="kpi-bar" data-pct="37.2" style="background:var(--gold)"></div></div>
+    </div>
+    <div class="kpi-card accent-warn">
+      <div class="kpi-label">Projected Year-End</div>
+      <div class="kpi-value">$19,609</div>
+      <div class="kpi-sub">At current pace — <strong>$6,609 over</strong> annual budget</div>
+      <div class="kpi-bar-wrap" style="--card-accent:#D4773C"><div class="kpi-bar" data-pct="100" style="background:#D4773C"></div></div>
+    </div>
+  </div>
+
+  <!-- Pace Warning -->
+  <div class="pace-banner">
+    <div class="pace-icon">⚠️</div>
+    <div>
+      <div class="pace-title">Spending Pace Alert</div>
+      <div class="pace-body">At the current 5-month average of <strong>$1,634/month</strong>, the program is on track to spend roughly <strong>$19,600</strong> — about 51% over the $13,000 annual budget. December was the highest single month at $3,137. With only $690/month remaining in budget for Jan–Jul 2026, close monitoring and expense prioritization will be important over the second half of the fiscal year.</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="section-header">
+        <div class="section-title">Monthly Spending</div>
+        <div class="section-note">Actuals Aug – Dec 2025</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="monthlyChart"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="section-header">
+        <div class="section-title">By Category</div>
+        <div class="section-note">5-month totals</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="categoryChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Table -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <div class="section-title">Category Breakdown</div>
+      <div class="section-note" style="margin-top:4px">Aug – Dec 2025 actuals · sorted by total spend</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Total Spent</th>
+          <th>Monthly Avg</th>
+          <th>% of Spend</th>
+          <th class="td-bar-cell">Share</th>
+        </tr>
+      </thead>
+      <tbody id="catTableBody"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<footer>
+  Circles of Support &nbsp;·&nbsp; 701 Ministry Budget &nbsp;·&nbsp; Fiscal Year August 2025 – July 2026 &nbsp;·&nbsp; Annual Budget: $13,000
+</footer>
+
+<script>
+const months = ['Aug 2025','Sep 2025','Oct 2025','Nov 2025','Dec 2025'];
+const monthlyTotals = [985.12, 1256.39, 1039.56, 1752.32, 3137.00];
+
+const categories = [
+  { name: 'Food & Groceries',     total: 2445.06 },
+  { name: 'Supplies & Household', total: 1581.52 },
+  { name: 'Meals & Dining',       total:  944.92 },
+  { name: 'Utilities',            total:  938.62 },
+  { name: 'Direct Family Support',total:  832.33 },
+  { name: 'Transportation',       total:  743.53 },
+  { name: 'Activities & Programs',total:  529.72 },
+  { name: 'Technology & Software',total:  154.69 },
+];
+
+const grandTotal = categories.reduce((s,c) => s + c.total, 0);
+
+const palette = [
+  '#C0614A','#6B8C74','#C9963A','#7E9BAD','#B07BA1','#D4773C','#5C8A6A','#A09060'
+];
+
+// ── Monthly Bar Chart ──
+new Chart(document.getElementById('monthlyChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [{
+      label: 'Spending',
+      data: monthlyTotals,
+      backgroundColor: monthlyTotals.map(v => v > 2000 ? 'rgba(192,97,74,0.85)' : 'rgba(107,140,116,0.75)'),
+      borderRadius: 7,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` $${ctx.parsed.y.toLocaleString('en-US',{minimumFractionDigits:2})}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { font: { family: 'DM Sans', size: 11 }, color: '#9A8E85' }
+      },
+      y: {
+        border: { dash: [4,4] },
+        grid: { color: '#E2D9CF' },
+        ticks: {
+          font: { family: 'DM Sans', size: 11 },
+          color: '#9A8E85',
+          callback: v => '$' + v.toLocaleString()
+        }
+      }
+    }
+  }
+});
+
+// ── Category Doughnut ──
+new Chart(document.getElementById('categoryChart'), {
+  type: 'doughnut',
+  data: {
+    labels: categories.map(c => c.name),
+    datasets: [{
+      data: categories.map(c => c.total),
+      backgroundColor: palette,
+      borderColor: '#FDFAF5',
+      borderWidth: 3,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          font: { family: 'DM Sans', size: 10 },
+          color: '#5A4F47',
+          boxWidth: 10,
+          padding: 10,
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` $${ctx.parsed.toLocaleString('en-US',{minimumFractionDigits:2})} (${(ctx.parsed/grandTotal*100).toFixed(1)}%)`
+        }
+      }
+    }
+  }
+});
+
+// ── Category Table ──
+const tbody = document.getElementById('catTableBody');
+categories.forEach((cat, i) => {
+  const avg = (cat.total / 5).toFixed(2);
+  const pct = (cat.total / grandTotal * 100).toFixed(1);
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${palette[i]};margin-right:8px;vertical-align:middle;"></span>${cat.name}</td>
+    <td class="td-num">$${cat.total.toLocaleString('en-US',{minimumFractionDigits:2})}</td>
+    <td class="td-avg">$${parseFloat(avg).toLocaleString('en-US',{minimumFractionDigits:2})}</td>
+    <td class="td-num">${pct}%</td>
+    <td class="td-bar-cell">
+      <div class="mini-bar-wrap"><div class="mini-bar" data-pct="${pct}" style="background:${palette[i]};width:0"></div></div>
+    </td>`;
+  tbody.appendChild(tr);
+});
+
+// ── Animate bars on load ──
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.querySelectorAll('.kpi-bar, .mini-bar').forEach(bar => {
+      const pct = parseFloat(bar.dataset.pct);
+      bar.style.width = Math.min(pct, 100) + '%';
+    });
+  }, 400);
+});
+</script>
+</body>
+</html>
